@@ -168,17 +168,6 @@ async function registerAllDOIs(objects, useConfig, easyDbUrl) {
   return Promise.all(objects.map( dbObject => registerDoiForObject(dbObject, easyDbOpts, config.datacite[useConfig]) ));
 }
 
-function verifySignature(body, receivedSignature, secret) {
-  log('verifying receivedSignature: ' + receivedSignature);
-  let hmac = crypto.createHmac('sha1', secret);
-  hmac.update(body);
-  const signature = 'sha1=' + hmac.digest('hex');
-  // Compare buffers in constant time
-  log('calculated signature: ' + signature);
-  return bufferEq(new Buffer(signature), new Buffer(receivedSignature));
-}
-
-
 /* How to write different responses
   ez5.respondSuccess(body, statusCode = 200)
 
@@ -204,10 +193,7 @@ function main(context) {
     returnAndLogJsonError('Missing request body', 400);
     return;
   }
-  if (!verifySignature(context.request.body, context.request.headers['X-Hub-Signature'], config.HMACSecret)) {
-    returnAndLogJsonError('Invalid signature hash or wrong HMACSecret configured', 401);
-    return;
-  }
+
   log(`Using config ${useConfig}`);
   try {
     const transition = JSON.parse(context.request.body);
