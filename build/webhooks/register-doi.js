@@ -94,7 +94,7 @@ async function registerDoiForObject(dbObject, easyDbOpts, dataciteOpts) {
   const dataciteMetadataResponseText = await dataciteMetadataResponse.text();
   if (!dataciteMetadataResponse.ok) {
     throw Error('Failed Datacite metadata registration: '
-      + `${dataciteMetadataResponse.status} ${dataciteMetadataResponse.statusText}, response: ${dataciteMetadataResponseText}`);
+      + `${dataciteMetadataResponse.status} ${dataciteMetadataResponse.statusText}, response: ${dataciteMetadataResponseText}, request body: ${metadataXml}`);
   }
   log('Success, response: ' + dataciteMetadataResponseText);
 

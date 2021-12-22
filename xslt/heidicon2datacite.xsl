@@ -10,8 +10,8 @@
 
   <xsl:template match="/">
     <resource
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-      xsi:schemaLocation="http://datacite.org/schema/kernel-4 http://schema.datacite.org/meta/kernel-4.1/metadata.xsd">
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://datacite.org/schema/kernel-4 http://schema.datacite.org/meta/kernel-4.1/metadata.xsd">
       <xsl:apply-templates select="//objects/objekte" />
       <xsl:apply-templates select="//objects/ressourcen" />
     </resource>
@@ -28,7 +28,7 @@
           <xsl:for-each select="_nested__objekte__obj_autoren/objekte__obj_autoren">
             <creator>
               <creatorName nameType="Personal"><xsl:value-of select="custom/string[@name='conceptName']" /></creatorName>
-            </creator> 
+            </creator>
           </xsl:for-each>
           <xsl:for-each select="_nested__objekte__obj_autoren_lok/objekte__obj_autoren_lok">
             <creator>
@@ -67,7 +67,7 @@
     <xsl:if test="count(_nested__objekte__obj_schlagworte/objekte__obj_schlagworte) or count(_nested__objekte__obj_schlagworte_lok/objekte__obj_schlagworte_lok)">
       <subjects>
         <xsl:for-each select="_nested__objekte__obj_schlagworte/objekte__obj_schlagworte">
-          <subject xml:lang="de-DE"><xsl:value-of select="custom/string[@name='conceptName']" /></subject> 
+          <subject xml:lang="de-DE"><xsl:value-of select="custom/string[@name='conceptName']" /></subject>
         </xsl:for-each>
         <xsl:for-each select="_nested__objekte__obj_schlagworte_lok/objekte__obj_schlagworte_lok">
           <xsl:if test="obj_schlagwort_lok/lokal_klass_sach/_standard/de-DE and string-length(obj_schlagwort_lok/lokal_klass_sach/_standard/de-DE)"><subject><xsl:value-of select="obj_schlagwort_lok/lokal_klass_sach/_standard/de-DE" /></subject></xsl:if>
@@ -84,20 +84,20 @@
       <alternateIdentifier alternateIdentifierType="URL">https://heidicon.ub.uni-heidelberg.de/detail/<xsl:value-of select="_system_object_id" /></alternateIdentifier>
     </alternateIdentifiers>
 
-    <rightsLists>
+    <rightsList>
       <xsl:for-each select="_reverse_nested__ressourcen__lk_objekt_id/ressourcen/res_lizenz/lizenzen">
         <xsl:if test="not(preceding::res_lizenz/lizenzen/_id=_id)">
           <rights><xsl:attribute name="rightsURI"><xsl:value-of select="custom[@name='link']/string[@name='url']" /></xsl:attribute><xsl:value-of select="bezeichnung/en-US" /></rights>
         </xsl:if>
       </xsl:for-each>
-    </rightsLists>
+    </rightsList>
 
     <xsl:if test="obj_beschreibung and string-length(obj_beschreibung)">
       <descriptions>
         <xsl:if test="obj_beschreibung/de-DE and string-length(obj_beschreibung/de-DE)"><description xml:lang="de-DE" descriptionType="Abstract"><xsl:value-of select="obj_beschreibung/de-DE" /></description></xsl:if>
         <xsl:if test="obj_beschreibung/en-US and string-length(obj_beschreibung/en-US)"><description xml:lang="en-US" descriptionType="Abstract"><xsl:value-of select="obj_beschreibung/en-US" /></description></xsl:if>
-      </descriptions> 
-    </xsl:if> 
+      </descriptions>
+    </xsl:if>
   </xsl:template>
 
   <!-- Datensätze vom Typ Aufnahme/Reproduktion -->
@@ -145,11 +145,11 @@
       <alternateIdentifier alternateIdentifierType="URL">https://heidicon.ub.uni-heidelberg.de/detail/<xsl:value-of select="_system_object_id" /></alternateIdentifier>
     </alternateIdentifiers>
 
-    <rightsLists>
+    <rightsList>
       <xsl:for-each select="res_lizenz/lizenzen">
         <rights><xsl:attribute name="rightsURI"><xsl:value-of select="custom[@name='link']/string[@name='url']" /></xsl:attribute><xsl:value-of select="bezeichnung/en-US" /></rights>
       </xsl:for-each>
-    </rightsLists>
+    </rightsList>
   </xsl:template>
 
   <xsl:template name="asset">
