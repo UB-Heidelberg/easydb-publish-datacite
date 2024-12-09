@@ -1,19 +1,27 @@
 plugin:
   name: easydb-publish-datacite-plugin
-  version: 0.2
+  version: 0.3
   url: https://github.com/programmfabrik/easydb-publish-datacite
+  l10n: l10n/l10n.csv
   displayname:
     de-DE: Webhook zur DOI Registrierung mit Datacite
     en-US: Webhook to register DOIs with Datacite
   info:
-    de-DE: "Holt easyDB Objekt Metadaten, sende Metadaten an Datacite und registriert eine DOI, sendet die DOI an easyDb publish API"
-    en-US: "Gets easydb object metadata, sends metadata to Datacite and registers DOI, sends the DOI to easydb publish API"
-  webhooks:
-    - name: register-doi
-      secret_base_config: "datacite_webhook.webhook_secret"
-  webfrontend:
-    # How to let the server know to only provide the l10n files for base config translation?
-    l10n: l10n/
+    de-DE: "Holt Objekt Metadaten, sende Metadaten an Datacite und registriert eine DOI, sendet die DOI an easyDb publish API"
+    en-US: "Gets object metadata, sends metadata to Datacite and registers DOI, sends the DOI to easydb publish API"
+  extensions:
+    webhook/register-doi:
+      exec:
+        service: "node"
+        commands:
+          - prog: "node"
+            stdin:
+              type: "body"
+            stdout:
+              type: "body"
+            args:
+              - type: "value"
+                value: "%_exec.pluginDir%/server/webhooks/register-doi.js"
 base_config:
   - name: datacite_webhook
     group: doi

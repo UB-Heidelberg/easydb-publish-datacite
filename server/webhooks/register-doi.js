@@ -9,7 +9,7 @@ const bufferEq = require('buffer-equal-constant-time');
 
 
 // Read configuration
-const config = require('../../config.js');
+const config = require('../../../config.js');
 
 
 function returnAndLogJsonError(error, status = 500) {
