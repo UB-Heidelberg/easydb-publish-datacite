@@ -1,0 +1,3 @@
+key,de-DE,en-US
+server.config.name.system.datacite_webhook,"DOI Registrierung","DOI Registration"
+server.config.parameter.system.datacite_webhook.webhook_secret.label,"Webhhok HMAC Token","Webhook HMAC Token"
