@@ -1,16 +1,19 @@
 // easyDB Datacite Webhook plugin
-const util = require('util');
 const fs = require('fs');
 const querystring = require('querystring');
-const crypto = require('crypto');
-
-const fetch = require('node-fetch');
-const bufferEq = require('buffer-equal-constant-time');
-
 
 // Read configuration
-const config = require('../../../config.js');
+const config = require('../../config.js');
 
+/**
+ * Helper Function to parse a JSON payload from stdin
+ * @returns {Promise<Object>}
+ */
+async function readPayload() {
+  let input = '';
+  for await (const chunk of process.stdin) input = input + chunk;
+  return JSON.parse(input);
+}
 
 function returnAndLogJsonError(error, status = 500) {
   let description;
@@ -168,41 +171,33 @@ async function registerAllDOIs(objects, useConfig, easyDbUrl) {
   return Promise.all(objects.map( dbObject => registerDoiForObject(dbObject, easyDbOpts, config.datacite[useConfig]) ));
 }
 
-/* How to write different responses
-  ez5.respondSuccess(body, statusCode = 200)
 
-  ez5.respondError(messageCode, parameters = {}, statusCode = 400)
 
-  messageCode is an localisation Key for the message.
 
-  TODO: Check how to write custom messages
+async function main() {
+  const info = JSON.parse(process.argv[2]);
+  console.error("info", info);
 
-  See https://docs.easydb.de/en/technical/node-runner/ for documentation on how
-  the script is run from the easyDb and which modules are available per default.
-
-  See https://docs.easydb.de/en/technical/plugins/webhooks/webhook/ for the
-  description of the parameter of the main function.
-*/
-function main(context) {
-  const easyDbUrl = context.config.system.server.external_url;
+  const input = await readPayload()
+  console.error("input", input);
+  const externalUrl = info.external_url;
 
   // Parse query parameters
-  var {useConfig = 'test'} = context.request.query_string_parameters;
+  var {useConfig = 'test'} = info.request.query;
   // Parse body
-  if (!context.request.body) {
+  if (!input) {
     returnAndLogJsonError('Missing request body', 400);
     return;
   }
 
   log(`Using config ${useConfig}`);
   try {
-    const transition = JSON.parse(context.request.body);
-    log(context.request);
+    log(info.request);
     if (!['UPDATE', 'INSERT'].includes(transition.operation)) {
       returnAndLogJsonError('Invalid JSON body, expected "operation" key with value "UPDATE" or "INSERT" operation')
       return;
     }
-    registerAllDOIs(transition.objects, useConfig, easyDbUrl).then( statuses => {
+    registerAllDOIs(transition.objects, useConfig, externalUrl).then( statuses => {
       log('All registerDoiForObject finished successfully');
       ez5.respondSuccess({status: statuses});
     }).catch(error => {
@@ -215,5 +210,4 @@ function main(context) {
 
 }
 
-// easyDb node-runner expects a function exported as "main"
-module.exports = { main }
+main().then(() => console.error("Done."));

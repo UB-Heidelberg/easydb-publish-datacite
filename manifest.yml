@@ -1,6 +1,6 @@
 plugin:
   name: easydb-publish-datacite-plugin
-  version: 0.3
+  version: 0.4
   url: https://github.com/programmfabrik/easydb-publish-datacite
   l10n: l10n/l10n.csv
   displayname:
@@ -22,6 +22,8 @@ plugin:
             args:
               - type: "value"
                 value: "%_exec.pluginDir%/server/webhooks/register-doi.js"
+              - type: "value"
+                value: "%info.json%"
 base_config:
   - name: datacite_webhook
     group: doi
