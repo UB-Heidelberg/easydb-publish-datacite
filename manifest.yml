@@ -9,21 +9,21 @@ plugin:
   info:
     de-DE: "Holt Objekt Metadaten, sende Metadaten an Datacite und registriert eine DOI, sendet die DOI an easyDb publish API"
     en-US: "Gets object metadata, sends metadata to Datacite and registers DOI, sends the DOI to easydb publish API"
-  extensions:
-    webhook/register-doi:
-      exec:
-        service: "node"
-        commands:
-          - prog: "node"
-            stdin:
-              type: "body"
-            stdout:
-              type: "body"
-            args:
-              - type: "value"
-                value: "%_exec.pluginDir%/server/webhooks/register-doi.js"
-              - type: "value"
-                value: "%info.json%"
+extensions:
+  webhook/register-doi:
+    exec:
+      service: "node"
+      commands:
+        - prog: "node"
+          stdin:
+            type: "body"
+          stdout:
+            type: "body"
+          args:
+            - type: "value"
+              value: "%_exec.pluginDir%/server/webhooks/register-doi.js"
+            - type: "value"
+              value: "%info.json%"
 base_config:
   - name: datacite_webhook
     group: doi

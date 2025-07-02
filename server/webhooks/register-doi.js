@@ -193,11 +193,7 @@ async function main() {
   log(`Using config ${useConfig}`);
   try {
     log(info.request);
-    if (!['UPDATE', 'INSERT'].includes(transition.operation)) {
-      returnAndLogJsonError('Invalid JSON body, expected "operation" key with value "UPDATE" or "INSERT" operation')
-      return;
-    }
-    registerAllDOIs(transition.objects, useConfig, externalUrl).then( statuses => {
+    registerAllDOIs(input.objects, useConfig, externalUrl).then( statuses => {
       log('All registerDoiForObject finished successfully');
       ez5.respondSuccess({status: statuses});
     }).catch(error => {
