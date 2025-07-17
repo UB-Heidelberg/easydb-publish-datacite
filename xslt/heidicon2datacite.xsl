@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns="http://datacite.org/schema/kernel-4">
+<xsl:stylesheet version="3.0"
+                xpath-default-namespace="https://schema.easydb.de/EASYDB/1.0/objects/"
+                xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns="https://datacite.org/schema/kernel-4">
   <xsl:output method="xml" encoding="utf-8"/>
 
   <!--
@@ -147,7 +149,7 @@
 
     <rightsList>
       <xsl:for-each select="res_lizenz/lizenzen">
-        <rights><xsl:attribute name="rightsURI"><xsl:value-of select="custom[@name='link']/string[@name='url']" /></xsl:attribute><xsl:value-of select="bezeichnung/en-US" /></rights>
+        <rights><xsl:attribute name="rightsURI"><xsl:value-of select="link/url" /></xsl:attribute><xsl:value-of select="bezeichnung/en-US" /></rights>
       </xsl:for-each>
     </rightsList>
   </xsl:template>

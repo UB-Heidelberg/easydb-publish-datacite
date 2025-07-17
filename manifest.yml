@@ -32,3 +32,8 @@ base_config:
         type: text
         default: ""
         position: 0
+custom_events:
+  PUBLISH_DATACITE_DOI_REGISTERED:
+    user: true
+  PUBLISH_DATACITE_DOI_FAILED:
+    user: true

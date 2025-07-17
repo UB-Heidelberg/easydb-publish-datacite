@@ -25,7 +25,14 @@ function returnAndLogJsonError(error, status = 500) {
     log(error, 'ERROR');
     description = error;
   }
-  ez5.respondError('error.api.generic', {description}, status)
+  const output = {
+    'code': 'error.api.generic', // define in l10n
+    "error": description,
+    "params": {description}, // map to ender the error code localization
+    "realm": "api", // this should always be "api"
+    "statuscode": status // an optional status code
+  };
+  process.stdout.write(JSON.stringify(output));
 }
 
 function authHeader(username, password) {
@@ -33,55 +40,55 @@ function authHeader(username, password) {
 }
 
 function log(messageOrObject, level='INFO') {
+  // Check to see if the message log has been initialized
+  if ( typeof log.messages == 'undefined' ) {
+    // It has not... perform the initialization
+    log.messages = [];
+  }
   if (typeof messageOrObject === 'object' && messageOrObject !== null) {
     messageOrObject = JSON.stringify(messageOrObject, null, 2);
   }
-  fs.appendFileSync(config.logFile, `${new Date().toISOString()} ${level} ${messageOrObject}\n`);
+  let entry = {
+    "timestamp": new Date().toISOString(),
+    "message": messageOrObject,
+    "level": level
+  };
+  console.error(JSON.stringify(entry));
+  log.messages.push(entry);
 }
 
-async function authenticateEasyDb(username, password, easyDbUrl) {
-  // get session token
-  const sessionPath = '/api/v1/session';
-  let response = await fetch(easyDbUrl + sessionPath);
-  let token;
-  if (response.ok) {
-    ({ token } = await response.json());
-  }
-  else {
-    const responseText = await response.text();
-    throw Error(`Failed calling ${sessionPath}: ${response.status} ${response.statusText} ${responseText}`);
-  }
-  log(`authenticateEasyDb: session token ${token}`);
-  let queryString = querystring.stringify({token, login: username, password});
-  log(`authenticateEasyDb: authenticate user ${username}`);
-  const authenticateResp = await fetch(`${easyDbUrl}/api/v1/session/authenticate?${queryString}`,
-    { method: 'post' });
-  if (authenticateResp.ok) {
-    const session = await authenticateResp.json();
-    if(session.authenticated) {
-      log(`authenticateEasyDb: authenticated with easyDb, token: ${session.token}`);
-      return session;
-    }
-    else {
-      const responseText = JSON.stringify(session);
-      throw Error(`Failed easyDb authentication, response: ${responseText}`);
+async function postEvent(fylrUrl, accessToken, objectType, objectVersion, objectId) {
+  const type = "PUBLISH_DATACITE_DOI_REGISTERED";
+  const event = {
+    'type': type,
+    'objecttype': objectType,
+    'object_id': objectId,
+    'object_version': objectVersion,
+    'info': {
+      'log': log.messages
     }
   }
-  else {
-    const responseText = await authenticateResp.text();
-    throw Error('Failed easyDb authentication:'
-      + `${authenticateResp.status} ${authenticateResp.statusText}, response: ${responseText}`);
+  const res = await fetch(fylrUrl + '/event?background=1', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + accessToken
+    },
+    body: JSON.stringify(event),
+  });
+  if (!res.ok) {
+    returnAndLogJsonError(`postEvent failed POST, status = ${res.status}, statustext = ${res.statusText}`);
   }
 }
 
-async function registerDoiForObject(dbObject, easyDbOpts, dataciteOpts) {
+async function registerDoiForObject(dbObject, publishOpts, dataciteOpts) {
   const { username, password, endpoint: dataciteEndpoint, doiPrefix} = dataciteOpts;
-  const { xsltName, token: easyDbToken, collector , url: easyDbUrl} = easyDbOpts;
+  const { xsltName, token: accessToken, collector , apiUrl: apiUrl, externalUrl: externalUrl} = publishOpts;
   const dataciteAuth = authHeader(username, password);
   const systemObjectId = dbObject._system_object_id;
   const doi = `${doiPrefix}${systemObjectId}`;
 
-  let metadataXml = await getMetadataFromEasyDb(dbObject._uuid, xsltName, easyDbUrl);
+  let metadataXml = await getMetadataFromDb(dbObject._uuid, xsltName, apiUrl);
   metadataXml = metadataXml.replace('___DOI_PLACEHOLDER___', doi);
 
   const dataciteMetadataUrl = dataciteEndpoint + '/metadata/' + doi;
@@ -90,7 +97,7 @@ async function registerDoiForObject(dbObject, easyDbOpts, dataciteOpts) {
     method: 'put',
     body: metadataXml,
     headers: {
-      'Content-Type': 'application/xml',
+      'Content-Type': 'application/vnd.datacite.datacite+xml',
       'Authorization': dataciteAuth,
     }
   })
@@ -101,7 +108,7 @@ async function registerDoiForObject(dbObject, easyDbOpts, dataciteOpts) {
   }
   log('Success, response: ' + dataciteMetadataResponseText);
 
-  const objectDetailUrl = `${easyDbUrl}/detail/${systemObjectId}`;
+  const objectDetailUrl = `${externalUrl}/detail/${systemObjectId}`;
   const dataciteMintUrl = `${dataciteEndpoint}/doi/${doi}`;
   const body = `doi=${doi}\nurl=${objectDetailUrl}\n`
   log(`PUT ${dataciteMintUrl} with body: ${body}`);
@@ -127,10 +134,10 @@ async function registerDoiForObject(dbObject, easyDbOpts, dataciteOpts) {
     easydb_uri: objectDetailUrl
   }
 
-  return { published: await postPublishedDoiToEasyDb(publish, easyDbUrl, easyDbToken) };
+  return { published: await postPublishedDoiToDb(publish, apiUrl, accessToken) };
 }
 
-async function getMetadataFromEasyDb(objectUuid, xsltName, easyDbUrl) {
+async function getMetadataFromDb(objectUuid, xsltName, easyDbUrl) {
   // TODO Check if authentication as api-user is necessary?
   const metadataUrl = easyDbUrl + '/api/v1/objects/uuid/' + objectUuid + '/format/xslt/' + xsltName;
   const metadataResponse = await fetch(metadataUrl);
@@ -143,8 +150,8 @@ async function getMetadataFromEasyDb(objectUuid, xsltName, easyDbUrl) {
   return metadataResponseBody;
 }
 
-async function postPublishedDoiToEasyDb(publishObject, easyDbUrl, easyDbToken) {
-  const publishApiUrl = easyDbUrl + '/api/v1/publish?token=' + easyDbToken;
+async function postPublishedDoiToDb(publishObject, apiUrl, accessToken) {
+  const publishApiUrl = apiUrl + '/api/v1/publish?access_token=' + accessToken;
   log(`POST ${publishApiUrl}, with publish object:`);
   log(publishObject);
   const publishResponse = await fetch(publishApiUrl,
@@ -154,7 +161,7 @@ async function postPublishedDoiToEasyDb(publishObject, easyDbUrl, easyDbToken) {
   })
   const publishResponseObject = await publishResponse.json();
   if (!publishResponse.ok ) {
-    throw Error(`Failed easyDb API publish: ${publishResponse.status} ${publishResponse.statusText}, response: `
+    throw Error(`Failed API publish: ${publishResponse.status} ${publishResponse.statusText}, response: `
       + JSON.stringify(publishResponseObject));
   }
 
@@ -162,16 +169,6 @@ async function postPublishedDoiToEasyDb(publishObject, easyDbUrl, easyDbToken) {
   log(publishResponseObject);
   return publishResponseObject;
 }
-
-async function registerAllDOIs(objects, useConfig, easyDbUrl) {
-  const session = await authenticateEasyDb(config.easyDb.user, config.easyDb.password, easyDbUrl);
-  const easyDbOpts = Object.assign({ token: session.token, url: easyDbUrl}, config.easyDb);
-
-  // New or updated object call async register doi and await all result
-  return Promise.all(objects.map( dbObject => registerDoiForObject(dbObject, easyDbOpts, config.datacite[useConfig]) ));
-}
-
-
 
 
 async function main() {
@@ -181,6 +178,8 @@ async function main() {
   const input = await readPayload()
   console.error("input", input);
   const externalUrl = info.external_url;
+  const apiUrl = info.api_url;
+  const accessToken = info.api_user_access_token;
 
   // Parse query parameters
   var {useConfig = 'test'} = info.request.query;
@@ -189,14 +188,17 @@ async function main() {
     returnAndLogJsonError('Missing request body', 400);
     return;
   }
-
   log(`Using config ${useConfig}`);
+
+  const opts = Object.assign({ token: accessToken, apiUrl: apiUrl, externalUrl: externalUrl}, config.easyDb);
   try {
     log(info.request);
-    registerAllDOIs(input.objects, useConfig, externalUrl).then( statuses => {
+    Promise.all(input.objects.map( dbObject => registerDoiForObject(dbObject, opts, config.datacite[useConfig]) )).then( statuses => {
       log('All registerDoiForObject finished successfully');
-      ez5.respondSuccess({status: statuses});
+      postEvent(apiUrl,accessToken)
+      process.stdout.write(JSON.stringify({status: statuses}));
     }).catch(error => {
+      postEvent(apiUrl,accessToken)
       returnAndLogJsonError(error);
     })
   }
@@ -206,4 +208,4 @@ async function main() {
 
 }
 
-main().then(() => console.error("Done."));
+main().catch(console.error);
