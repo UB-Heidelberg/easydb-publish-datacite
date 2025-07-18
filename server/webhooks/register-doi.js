@@ -45,15 +45,12 @@ function log(messageOrObject, level='INFO') {
     // It has not... perform the initialization
     log.messages = [];
   }
-  if (typeof messageOrObject === 'object' && messageOrObject !== null) {
-    messageOrObject = JSON.stringify(messageOrObject, null, 2);
-  }
   let entry = {
     "timestamp": new Date().toISOString(),
     "message": messageOrObject,
     "level": level
   };
-  console.error(JSON.stringify(entry));
+  console.error(entry.timestamp, entry.level, entry.message);
   log.messages.push(entry);
 }
 
@@ -68,7 +65,7 @@ async function postEvent(fylrUrl, accessToken, objectType, objectVersion, object
       'log': log.messages
     }
   }
-  const res = await fetch(fylrUrl + '/event?background=1', {
+  const res = await fetch(fylrUrl + '/api/v1/event?background=1', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -88,16 +85,16 @@ async function registerDoiForObject(dbObject, publishOpts, dataciteOpts) {
   const systemObjectId = dbObject._system_object_id;
   const doi = `${doiPrefix}${systemObjectId}`;
 
-  let metadataXml = await getMetadataFromDb(dbObject._uuid, xsltName, apiUrl);
+  let metadataXml = await getMetadataFromDb(systemObjectId, xsltName, apiUrl);
   metadataXml = metadataXml.replace('___DOI_PLACEHOLDER___', doi);
 
   const dataciteMetadataUrl = dataciteEndpoint + '/metadata/' + doi;
   log(`PUT metadata to ${dataciteMetadataUrl}`);
   const dataciteMetadataResponse = await fetch(dataciteMetadataUrl, {
-    method: 'put',
+    method: 'PUT',
     body: metadataXml,
     headers: {
-      'Content-Type': 'application/vnd.datacite.datacite+xml',
+      'Content-Type': 'application/xml;charset=utf-8',
       'Authorization': dataciteAuth,
     }
   })
@@ -137,16 +134,15 @@ async function registerDoiForObject(dbObject, publishOpts, dataciteOpts) {
   return { published: await postPublishedDoiToDb(publish, apiUrl, accessToken) };
 }
 
-async function getMetadataFromDb(objectUuid, xsltName, easyDbUrl) {
-  // TODO Check if authentication as api-user is necessary?
-  const metadataUrl = easyDbUrl + '/api/v1/objects/uuid/' + objectUuid + '/format/xslt/' + xsltName;
+async function getMetadataFromDb(systemObjectId, xsltName, easyDbUrl) {
+  const metadataUrl = easyDbUrl + '/api/v1/objects/id/' + systemObjectId + '/format/xslt/' + xsltName;
   const metadataResponse = await fetch(metadataUrl);
   const metadataResponseBody = await metadataResponse.text();
   if (!metadataResponse.ok) {
-    throw Error('Failed getting metadata from easyDb: '
-      + `${metadataResponse.status} ${metadataResponse.statusText}, response: ${dataciteMetadataResponseText}`);
+    throw Error('Failed getting metadata from db: '
+      + `${metadataResponse.status} ${metadataResponse.statusText}, response: ${metadataResponseBody}`);
   }
-  log(`Got metadata for ${objectUuid}`);
+  log(`Got metadata for systemObjectId = ${systemObjectId}`);
   return metadataResponseBody;
 }
 
@@ -173,10 +169,7 @@ async function postPublishedDoiToDb(publishObject, apiUrl, accessToken) {
 
 async function main() {
   const info = JSON.parse(process.argv[2]);
-  console.error("info", info);
-
   const input = await readPayload()
-  console.error("input", input);
   const externalUrl = info.external_url;
   const apiUrl = info.api_url;
   const accessToken = info.api_user_access_token;
@@ -189,10 +182,11 @@ async function main() {
     return;
   }
   log(`Using config ${useConfig}`);
+  log(process.env);
 
   const opts = Object.assign({ token: accessToken, apiUrl: apiUrl, externalUrl: externalUrl}, config.easyDb);
   try {
-    log(info.request);
+    log(info.request.header);
     Promise.all(input.objects.map( dbObject => registerDoiForObject(dbObject, opts, config.datacite[useConfig]) )).then( statuses => {
       log('All registerDoiForObject finished successfully');
       postEvent(apiUrl,accessToken)
