@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <xsl:stylesheet version="3.0"
                 xpath-default-namespace="https://schema.easydb.de/EASYDB/1.0/objects/"
-                xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns="https://datacite.org/schema/kernel-4">
+                xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns="http://datacite.org/schema/kernel-4">
   <xsl:output method="xml" encoding="utf-8"/>
 
   <!--
